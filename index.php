@@ -7,7 +7,7 @@
   Author URI: komefumi.github.io
 */
 
-class Vecktor_WordCountAndTimePlugin
+class TerraOne_WordCountAndTimePlugin
 {
   function __construct()
   {
@@ -21,9 +21,10 @@ class Vecktor_WordCountAndTimePlugin
 
   function output_admin_page_html()
   { ?>
-    <div>Hello World from our new Plugin</div>
-    <h2>Hello</h2>
+    <div class="wrap">
+      <h1>Word Count Settings</h1>
+    </div>
 <?php }
 }
 
-$wordCountAndTimePlugin = new Vecktor_WordCountAndTimePlugin();
+$wordCountAndTimePlugin = new TerraOne_WordCountAndTimePlugin();
