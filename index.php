@@ -14,16 +14,19 @@ class Vecktor_TerraOnePlugin
   private string $setting_section_default = 'terraone__first_section';
   private string $setting_slug = 'word-count-settings';
   private string $setting_group = 'word-count-plugin';
-  private array $setting_base_names = ['location', 'headline'];
+  private array $setting_base_names = [
+    'location',
+    'headline'
+  ];
   private array $setting_name_to_data = array(
     'location' => array(
-      'default_val' => '0',
+      'default_val' => 0,
       'display_name' => 'Display Location',
       'display_fn' => 'location_html',
     ),
     'headline' => array(
-      'default_val' => 'default headline',
-      'display_name' => 'Headline',
+      'default_val' => 'Post Statistics',
+      'display_name' => 'Headline Text',
       'display_fn' => 'headline_html',
     ),
   );
@@ -54,9 +57,9 @@ class Vecktor_TerraOnePlugin
         'display_fn' => $display_fn,
         'default_val' => $default_val,
       ) = $this->setting_name_to_data[$base_name];
-      $full_name = $this->get_full_setting_name($base_name);
+      $full_setting_name = $this->get_full_setting_name($base_name);
       add_settings_field(
-        $full_name,
+        $full_setting_name,
         $display_name,
         array($this, $display_fn),
         $this->setting_slug,
@@ -64,7 +67,7 @@ class Vecktor_TerraOnePlugin
       );
       register_setting(
         $this->setting_group,
-        $display_name,
+        $full_setting_name,
         array('sanitize_callback' => 'sanitize_text_field', 'default' => $default_val),
       );
     }
@@ -75,17 +78,26 @@ class Vecktor_TerraOnePlugin
     $setting_name = $this->get_full_setting_name($this->setting_base_names[0]);
 ?>
     <select name="<? echo $setting_name ?>">
-      <option value="0" <? selected(get_option($setting_name), '0'); ?>>Beginning of Post</option>
-      <option value="1" <? selected(get_option($setting_name), '1'); ?>>End of Post</option>
+      <option value="0" <? echo selected(get_option($setting_name), '0'); ?>>Beginning of Post</option>
+      <option value="1" <? echo selected(get_option($setting_name), '1'); ?>>End of Post</option>
     </select>
   <?php }
 
   function headline_html()
   {
-    $setting_name = $this->get_full_setting_name($this->setting_base_names[0]);
+    $base_name = $this->setting_base_names[1];
+    $setting_name = $this->get_full_setting_name($base_name);
   ?>
-    <input name="<?php echo $setting_name ?>" />
+    <input name="<?php echo $setting_name ?>" value="<? echo $this->safely_get_option($base_name); ?>" />
   <?php }
+
+  function safely_get_option($base_name)
+  {
+    $setting_name = $this->get_full_setting_name($base_name);
+    list('default_val' => $default_val) = $this->setting_name_to_data[$base_name];
+    $current_value = get_option($setting_name, $default_val);
+    return esc_attr($current_value);
+  }
 
   function admin_menu_option()
   {
