@@ -7,17 +7,35 @@
   Author URI: komefumi.github.io
 */
 
+
 class Vecktor_TerraOnePlugin
 {
+  private string $setting_prefix = "terraone__";
   private string $setting_section_default = 'terraone__first_section';
   private string $setting_slug = 'word-count-settings';
   private string $setting_group = 'word-count-plugin';
-  private array $setting_names;
+  private array $setting_base_names = ['location', 'headline'];
+  private array $setting_name_to_data = array(
+    'location' => array(
+      'default_val' => '0',
+      'display_name' => 'Display Location',
+      'display_fn' => 'location_html',
+    ),
+    'headline' => array(
+      'default_val' => 'default headline',
+      'display_name' => 'Headline',
+      'display_fn' => 'headline_html',
+    ),
+  );
   function __construct()
   {
-    $this->setting_names = array_map(fn ($base_name) => "terraone__$base_name", ['location']);
     add_action('admin_menu', array($this, 'admin_menu_option'));
     add_action('admin_init', array($this, 'settings'));
+  }
+
+  private function get_full_setting_name($base_name)
+  {
+    return "$this->setting_prefix$base_name";
   }
 
 
@@ -30,24 +48,43 @@ class Vecktor_TerraOnePlugin
       },
       $this->setting_slug
     );
-    add_settings_field(
-      $this->setting_names[0],
-      'Display Location',
-      array($this, 'location_html'),
-      $this->setting_slug,
-      $this->setting_section_default
-    );
-    register_setting(
-      $this->setting_group,
-      $this->setting_names[0],
-      array('sanitize_callback' => 'sanitize_text_field', 'default' => 0),
-    );
+    foreach ($this->setting_base_names as $base_name) {
+      list(
+        'display_name' => $display_name,
+        'display_fn' => $display_fn,
+        'default_val' => $default_val,
+      ) = $this->setting_name_to_data[$base_name];
+      $full_name = $this->get_full_setting_name($base_name);
+      add_settings_field(
+        $full_name,
+        $display_name,
+        array($this, $display_fn),
+        $this->setting_slug,
+        $this->setting_section_default,
+      );
+      register_setting(
+        $this->setting_group,
+        $display_name,
+        array('sanitize_callback' => 'sanitize_text_field', 'default' => $default_val),
+      );
+    }
   }
 
   function location_html()
-  { ?>
-    <div>Location HTML</div>
-    <select name="<? echo $this->setting_names[0] ?>" id=""></select>
+  {
+    $setting_name = $this->get_full_setting_name($this->setting_base_names[0]);
+?>
+    <select name="<? echo $setting_name ?>">
+      <option value="0" <? selected(get_option($setting_name), '0'); ?>>Beginning of Post</option>
+      <option value="1" <? selected(get_option($setting_name), '1'); ?>>End of Post</option>
+    </select>
+  <?php }
+
+  function headline_html()
+  {
+    $setting_name = $this->get_full_setting_name($this->setting_base_names[0]);
+  ?>
+    <input name="<?php echo $setting_name ?>" />
   <?php }
 
   function admin_menu_option()
@@ -68,6 +105,7 @@ class Vecktor_TerraOnePlugin
       <h1>Word Count Settings</h1>
       <form action="options.php" method="post">
         <?php
+        settings_fields($this->setting_group);
         do_settings_sections($this->setting_slug);
         submit_button();
         ?>
