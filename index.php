@@ -78,8 +78,8 @@ class Vecktor_TerraOnePlugin
     $setting_name = $this->get_full_setting_name($this->setting_base_names[0]);
 ?>
     <select name="<? echo $setting_name ?>">
-      <option value="0" <? echo selected(get_option($setting_name), '0'); ?>>Beginning of Post</option>
-      <option value="1" <? echo selected(get_option($setting_name), '1'); ?>>End of Post</option>
+      <option value="0" <? selected(get_option($setting_name), '0'); ?>>Beginning of Post</option>
+      <option value="1" <? selected(get_option($setting_name), '1'); ?>>End of Post</option>
     </select>
   <?php }
 
