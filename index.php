@@ -92,7 +92,7 @@ class Vecktor_TerraOnePlugin
       return get_option($setting_name, '1');
     })) > 0;
 
-    if ((is_main_query() and is_single()) and $has_settings_needed_for_showing) {
+    if (is_main_query() and is_single() and $has_settings_needed_for_showing) {
       return $this->create_html($content);
     }
 
