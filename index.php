@@ -34,7 +34,7 @@ class Vecktor_TerraOnePlugin
       'default_val' => 'Post Statistics',
       'display_name' => 'Headline Text',
       'display_fn' => 'headline_html',
-      'sanitize_fn' => 'default',
+      'sanitize_fn' => 'default', // 'default' is checked for and handled specially
       'pass_data_to_display_fn' => false,
       'validation_error' => 'Headline must be valid text',
     ),
@@ -67,17 +67,41 @@ class Vecktor_TerraOnePlugin
   {
     add_action('admin_menu', array($this, 'admin_menu_option'));
     add_action('admin_init', array($this, 'settings'));
+    add_filter('the_content', array($this, 'if_wrap'));
   }
 
-  private function get_setting_error_name($base_name)
+  private function get_setting_error_name(string $base_name)
   {
     $setting_name = $this->get_full_setting_name($base_name);
     return "$setting_name$this->setting_error_suffix";
   }
 
-  private function get_full_setting_name($base_name)
+  private function get_full_setting_name(string $base_name)
   {
     return "$this->setting_prefix$base_name";
+  }
+
+  function if_wrap($content)
+  {
+    $has_settings_needed_for_showing = count(array_filter(array_slice($this->setting_base_names, 2), function ($base_name) {
+      $setting_name = $this->get_full_setting_name($base_name);
+      /*
+       * After user just installs the plugin, options might not be set.
+       * So we need to give default value as second parameter
+       */
+      return get_option($setting_name, '1');
+    })) > 0;
+
+    if ((is_main_query() and is_single()) and $has_settings_needed_for_showing) {
+      return $this->create_html($content);
+    }
+
+    return $content;
+  }
+
+  function create_html(string $content)
+  {
+    return "<div>$content<div>Hey this works</div></div>";
   }
 
 
@@ -107,6 +131,7 @@ class Vecktor_TerraOnePlugin
         $this->setting_section_default,
         $pass_data_to_display_fn ? array($base_name) : array(),
       );
+
       register_setting(
         $this->setting_group,
         $full_setting_name,
@@ -115,31 +140,34 @@ class Vecktor_TerraOnePlugin
     }
   }
 
-  function sanitize_location($input)
+  function sanitize_location(mixed $input)
   {
     return $this->sanitize_on_and_off($input, 0);
   }
 
-  function sanitize_word_count($input)
+  function sanitize_word_count(mixed $input)
   {
     return $this->sanitize_on_and_off($input, 2, true);
   }
 
-  function sanitize_character_count($input)
+  function sanitize_character_count(mixed $input)
   {
     return $this->sanitize_on_and_off($input, 3, true);
   }
 
-  function sanitize_read_time($input)
+  function sanitize_read_time(mixed $input)
   {
     return $this->sanitize_on_and_off($input, 4, true);
   }
 
-  function sanitize_on_and_off($input, $base_name_index, $allow_empty = false)
+  function sanitize_on_and_off(mixed $input, string $base_name_index, $allow_empty = false)
   {
     $base_name = $this->setting_base_names[$base_name_index];
     $setting_name = $this->get_full_setting_name($base_name);
-    if ($allow_empty && $input == '') return get_option($setting_name);
+    if ($allow_empty and !$input) {
+      if ($base_name_index > 1) return '0';
+      return get_option($setting_name);
+    }
     if (!in_array($input, array('0', '1'))) {
       $error_name = $this->get_setting_error_name($base_name);
       list('validation_error' => $validation_error) = $this->setting_name_to_data[$base_name];
@@ -168,7 +196,7 @@ class Vecktor_TerraOnePlugin
     <input name="<?php echo $setting_name ?>" value="<? echo $this->safely_get_option($base_name); ?>" />
   <?php }
 
-  function checkbox_html($args)
+  function checkbox_html(array $args)
   {
     $base_name = $args[0];
     $setting_name = $this->get_full_setting_name($base_name);
