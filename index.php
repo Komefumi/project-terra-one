@@ -5,12 +5,15 @@
   Version: 0.1
   Author: Vecktor [komefumi]
   Author URI: komefumi.github.io
+  Text Domain: terraone_translation_domain
+  Domain Path: /languages
 */
 
 class Vecktor_TerraOnePlugin
 {
   private string $setting_prefix = "terraone__";
   private string $setting_error_suffix = "__error";
+  private string $domain_for_translations = "terraone_translation_domain";
   private string $setting_section_default = 'terraone__first_section';
   private string $setting_slug = 'word-count-settings';
   private string $setting_group = 'word-count-plugin';
@@ -68,6 +71,16 @@ class Vecktor_TerraOnePlugin
     add_action('admin_menu', array($this, 'admin_menu_option'));
     add_action('admin_init', array($this, 'settings'));
     add_filter('the_content', array($this, 'if_wrap'));
+    add_action('init', array($this, 'languages'));
+  }
+
+  function languages()
+  {
+    load_plugin_textdomain(
+      "terraone_translation_domain",
+      false,
+      dirname(plugin_basename(__FILE__)) . '/languages'
+    );
   }
 
   private function get_setting_error_name(string $base_name)
@@ -101,9 +114,54 @@ class Vecktor_TerraOnePlugin
 
   function create_html(string $content)
   {
-    return "<div>$content<div>Hey this works</div></div>";
-  }
+    $setting_values = array_reduce(array_slice($this->setting_base_names, 0), function ($mapping, $base_name) {
+      $setting_name = $this->get_full_setting_name($base_name);
+      list('default_val' => $default_val) = $this->setting_name_to_data[$base_name];
+      $mapping[$base_name] = get_option($setting_name, $default_val);
+      return $mapping;
+    }, array());
+    $has_word_count = $setting_values['word_count'] == '1';
+    $has_character_count = $setting_values['character_count'] == '1';
+    $has_read_time = $setting_values['read_time'] == '1';
+    $word_count =
+      ($has_word_count or $has_read_time)
+      ? str_word_count(strip_tags($content))
+      : null;
+    $character_count = $has_character_count ? strlen(strip_tags($content)) : null;
+    $read_time = $has_read_time ? round($word_count / 225, 1) : null;
 
+    $html = '';
+    $headline = esc_html($setting_values['headline']);
+    $translated__this_post_has = esc_html__("This post has", "terraone_translation_domain");
+    $additional_html = <<< HTML
+      <div>
+        <h3>$headline</h3>
+      </div>
+      <p>
+      <!-- <div>
+        $content
+      </div> -->
+    HTML;
+    if ($has_word_count) {
+      $additional_html .= "$translated__this_post_has" . " $word_count "
+        . esc_html__("words", "terraone_translation_domain") . ".<br/>";
+    }
+    if ($has_character_count) {
+      $additional_html .= "$translated__this_post_has" . " $character_count "
+        . esc_html__("characters", "terraone_translation_domain") . ".<br/>";
+    }
+    if ($has_read_time) {
+      $additional_html .= esc_html__("Read time", "terraone_translation_domain") . ": $read_time "
+        . esc_html__("minute(s)", "terraone_translation_domain") . ".<br/>";
+    }
+    $additional_html .= '</p>';
+    if ($setting_values['location'] == '0') {
+      $html = $additional_html . $content;
+    } else {
+      $html = $content . $additional_html;
+    }
+    return $html;
+  }
 
   function settings()
   {
@@ -217,7 +275,8 @@ class Vecktor_TerraOnePlugin
     $required_capability_as_permission = 'manage_options';
     add_options_page(
       'Word Count Settings',
-      'Word Count',
+      esc_html__('Word Count', "terraone_translation_domain"),
+      // 'Word Count',
       $required_capability_as_permission,
       $this->setting_slug,
       array($this, 'settings_page'),
